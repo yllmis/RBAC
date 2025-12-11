@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBAC 登录</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+        }
+
+        .login-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            background-color: #40a9ff;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+        }
+
+        .error-msg {
+            color: #ff4d4f;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .success-msg {
+            color: #52c41a;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="login-container">
+            <h2 style="text-align: center; margin-bottom: 2rem;">系统登录</h2>
+
+            <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
+            <div v-if="successMsg" class="success-msg">{{ successMsg }}</div>
+
+            <form @submit.prevent="handleLogin">
+                <div class="form-group">
+                    <label>账号</label>
+                    <input type="text" v-model="form.account" placeholder="请输入账号" required>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" v-model="form.password" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" :disabled="loading">
+                    {{ loading ? '登录中...' : '登录' }}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, reactive, ref } = Vue;
+
+        createApp({
+            setup() {
+                const form = reactive({
+                    account: '',
+                    password: ''
+                });
+                const loading = ref(false);
+                const errorMsg = ref('');
+                const successMsg = ref('');
+
+                const handleLogin = async () => {
+                    loading.value = true;
+                    errorMsg.value = '';
+                    successMsg.value = '';
+
+                    try {
+                        // 假设后端接口地址为 /login，如果不同请修改此处
+                        // 注意：如果前后端端口不同，可能需要配置跨域或代理
+                        const res = await axios.post('http://localhost:8080/login', {
+                            account: form.account,
+                            password: form.password
+                        });
+
+                        const data = res.data;
+
+                        // 根据 ecode 包的定义，code 1000 为成功
+                        if (data.code === 1000) {
+                            successMsg.value = '登录成功！正在跳转...';
+                            // 保存 token
+                            localStorage.setItem('token', data.data.token);
+                            // 可以在这里进行跳转，例如 window.location.href = '/dashboard';
+                        } else {
+                            errorMsg.value = data.msg || '登录失败';
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        errorMsg.value = '网络错误或服务器异常';
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                return {
+                    form,
+                    loading,
+                    errorMsg,
+                    successMsg,
+                    handleLogin
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>

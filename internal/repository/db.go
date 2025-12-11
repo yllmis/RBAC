@@ -16,13 +16,13 @@ func NewMysql() {
 		"258369",
 		"10.148.126.209",
 		3306,
-		"rabc")
+		"rbac")
 	conn, err := gorm.Open(mysql.Open(my), &gorm.Config{})
 	if err != nil {
 		fmt.Println("数据库连接失败,请检查参数:", err)
 		panic(err)
 	}
-	Conn := conn
+	Conn = conn
 	fmt.Println("数据库连接成功!")
 
 }
