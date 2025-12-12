@@ -20,7 +20,7 @@ func DoLogin(ctx *gin.Context) {
 		return
 	}
 
-	token, err := service.Login(req.Account, req.Password)
+	token, err := service.Login(ctx, req.Account, req.Password)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, tools.UserErr)
 		return

@@ -35,3 +35,27 @@ type UserRole struct {
 func (u *UserRole) TableName() string {
 	return "user_role"
 }
+
+// Permission
+type Permission struct {
+	Id       int64  `gorm:"column:id;primary_key;AUTO_INCREMENT;NOT NULL"`
+	PermName string `gorm:"column:perm_name;default:NULL"`
+	PermCode string `gorm:"column:perm_code;default:NULL"`
+}
+
+// TableName 表名
+func (p *Permission) TableName() string {
+	return "permission"
+}
+
+// RolePerm
+type RolePerm struct {
+	Id     int64 `gorm:"column:id;primary_key;AUTO_INCREMENT;NOT NULL"`
+	RoleId int64 `gorm:"column:role_id;default:NULL"`
+	PermId int64 `gorm:"column:perm_id;default:NULL"`
+}
+
+// TableName 表名
+func (r *RolePerm) TableName() string {
+	return "role_perm"
+}

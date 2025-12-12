@@ -8,6 +8,7 @@ import (
 func main() {
 
 	repository.NewMysql()
+	repository.NewRedis()
 
 	router.Start()
 

@@ -26,3 +26,13 @@ func NewMysql() {
 	fmt.Println("数据库连接成功!")
 
 }
+
+func Close() {
+	DB, err := Conn.DB()
+	if err != nil {
+		fmt.Println("数据库关闭失败,请检查:", err)
+		return
+	}
+	DB.Close()
+	fmt.Println("数据库连接已关闭!")
+}
