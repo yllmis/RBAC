@@ -20,3 +20,23 @@ func GetPermByRole(roleId []int64) ([]model.Permission, error) {
 	}
 	return perms, nil
 }
+
+func CheckUserPerm(userId int64, path string, method string) (bool, error) {
+
+	roleIds, err := GetRoleByUserId(userId)
+	if err != nil {
+		return false, err
+	}
+
+	perms, err := GetPermByRole(roleIds)
+	if err != nil {
+		return false, err
+	}
+
+	for _, perm := range perms {
+		if perm.ApiPath == path && perm.Method == method {
+			return true, nil
+		}
+	}
+	return false, nil
+}

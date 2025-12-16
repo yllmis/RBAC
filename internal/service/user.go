@@ -39,6 +39,11 @@ func Login(ctx context.Context, account, password string) (string, error) {
 			// Field: "user:list", Value: "1"
 			permMap[p.PermCode] = "1"
 		}
+
+		if p.Method != "" && p.ApiPath != "" {
+			key := fmt.Sprintf("%s:%s", p.Method, p.ApiPath)
+			permMap[key] = "1"
+		}
 	}
 
 	if len(permMap) > 0 {

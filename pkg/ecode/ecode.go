@@ -3,10 +3,11 @@ package tools
 import "fmt"
 
 var (
-	OK       = ECode{Code: 0}
-	NotLogin = ECode{Code: 10001, Message: "用户未登录"}
-	ParamErr = ECode{Code: 10002, Message: "参数错误"}
-	UserErr  = ECode{Code: 10003, Message: "用户名或密码错误"}
+	OK           = ECode{Code: 0}
+	NotLogin     = ECode{Code: 10001, Message: "用户未登录"}
+	ParamErr     = ECode{Code: 10002, Message: "参数错误"}
+	UserErr      = ECode{Code: 10003, Message: "用户名或密码错误"}
+	NoPermission = ECode{Code: 10004, Message: "没有权限访问"}
 )
 
 type ECode struct {

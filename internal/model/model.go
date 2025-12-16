@@ -41,6 +41,9 @@ type Permission struct {
 	Id       int64  `gorm:"column:id;primary_key;AUTO_INCREMENT;NOT NULL"`
 	PermName string `gorm:"column:perm_name;default:NULL"`
 	PermCode string `gorm:"column:perm_code;default:NULL"`
+
+	ApiPath string `gorm:"column:api_path;default:NULL"` // 例如：/api/users
+	Method  string `gorm:"column:method;default:NULL"`
 }
 
 // TableName 表名
