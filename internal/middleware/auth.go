@@ -40,11 +40,17 @@ func AuthMiddleware() gin.HandlerFunc {
 		// 将 userId 存入上下文，供后续处理使用
 		ctx.Set("userId", userId)
 
-		currentPath := ctx.Request.URL.Path
+		currentPath := ctx.FullPath()
+
+		if currentPath == "" {
+			ctx.JSON(http.StatusNotFound, tools.NotFound)
+			ctx.Next()
+			return
+		}
 		currentMethod := ctx.Request.Method
 
-		redisField := fmt.Sprintf("%s:%s", currentMethod, currentMethod)
-		redisKey := fmt.Sprintf("user_prem_%d", userId)
+		redisField := fmt.Sprintf("%s:%s", currentPath, currentMethod)
+		redisKey := fmt.Sprintf("user_prems_%d", userId)
 
 		// 检查用户权限
 		exits, err := repository.Rdb.HExists(ctx, redisKey, redisField).Result()

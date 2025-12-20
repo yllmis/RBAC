@@ -20,6 +20,8 @@ func Start() {
 	// 前端 axios.post('/login') 会请求到这里
 	g.POST("/login", handler.DoLogin)
 
+	g.GET("/api/users", handler.GetUserList)
+
 	// 启动服务 (端口改为 8080 以匹配前端代码)
 	g.Run(":8080")
 }

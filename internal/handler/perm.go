@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetRole(ctx *gin.Context) {
+func SetRole(ctx *gin.Context) bool {
 
 	var userRole model.UserRole
 	if err := ctx.ShouldBind(&userRole); err != nil {
@@ -23,6 +23,26 @@ func SetRole(ctx *gin.Context) {
 			Message: err.Error(),
 			Data:    nil,
 		})
+		return false
+	}
+	return true
+}
+
+func GetUserList(ctx *gin.Context) {
+	users, err := service.GetUserList(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, tools.ECode{
+			Code:    10001,
+			Message: "获取所有用户列表失败",
+			Data:    nil,
+		})
 		return
 	}
+
+	ctx.JSON(http.StatusOK, tools.ECode{
+		Code:    0,
+		Message: "获取所有用户列表成功",
+		Data:    users,
+	})
+
 }

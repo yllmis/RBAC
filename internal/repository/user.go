@@ -16,3 +16,15 @@ func GetUserByAccount(account string) (*model.User, error) {
 
 	return &user, nil
 }
+
+func GetAllUsers() ([]model.User, error) {
+	var users []model.User
+
+	err := Conn.Raw("select * from user").Scan(&users).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("GetAllUsers error: %v", err)
+	}
+
+	return users, nil
+}

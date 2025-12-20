@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/RBAC/internal/model"
 	"github.com/RBAC/internal/repository"
 	"github.com/RBAC/pkg/utils"
 )
@@ -57,4 +58,8 @@ func Login(ctx context.Context, account, password string) (string, error) {
 
 	return token, err
 
+}
+
+func GetUserList(ctx context.Context) ([]model.User, error) {
+	return repository.GetAllUsers()
 }
