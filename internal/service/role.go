@@ -11,11 +11,11 @@ func SetUserRole(userId, roleId int64) error {
 	if roleId == 0 {
 		return errors.New("选择一个角色")
 	}
-	exist, err := repository.GetRoleByUserId(userId)
+	roleIds, err := repository.GetRoleByUserId(userId)
 	if err != nil {
 		return err
 	}
-	if exist != nil {
+	if len(roleIds) > 0 {
 		return errors.New("用户已分配角色，不能重复分配")
 	}
 

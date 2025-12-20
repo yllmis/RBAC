@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/RBAC/internal/model"
 	"github.com/RBAC/internal/repository"
@@ -25,7 +24,10 @@ func Login(ctx context.Context, account, password string) (string, error) {
 	}
 
 	token, err := utils.GenerateToken(user.Id)
-	roleId, err := repository.GetRoleByUserId(user.Id)
+	if err != nil {
+		return "", err
+	}
+	roleId, _ := repository.GetRoleByUserId(user.Id)
 	perms, err := repository.GetPermByRole(roleId)
 	if err != nil {
 		return "", err
@@ -40,11 +42,6 @@ func Login(ctx context.Context, account, password string) (string, error) {
 			// Field: "user:list", Value: "1"
 			permMap[p.PermCode] = "1"
 		}
-
-		if p.Method != "" && p.ApiPath != "" {
-			key := fmt.Sprintf("%s:%s", p.Method, p.ApiPath)
-			permMap[key] = "1"
-		}
 	}
 
 	if len(permMap) > 0 {
@@ -53,7 +50,7 @@ func Login(ctx context.Context, account, password string) (string, error) {
 			fmt.Printf("Redis缓存失败,%s", err)
 		}
 
-		repository.Rdb.Expire(ctx, rediskey, 2*time.Hour)
+		repository.Rdb.Expire(ctx, rediskey, utils.TokenTTL)
 	}
 
 	return token, err

@@ -21,22 +21,22 @@ func GetPermByRole(roleId []int64) ([]model.Permission, error) {
 	return perms, nil
 }
 
-func CheckUserPerm(userId int64, path string, method string) (bool, error) {
-
+func CheckUserPerm(userId int64, requiredPerm string) (bool, error) {
 	roleIds, err := GetRoleByUserId(userId)
 	if err != nil {
 		return false, err
 	}
+	if len(roleIds) == 0 {
+		return false, nil
+	}
 
-	perms, err := GetPermByRole(roleIds)
-	if err != nil {
+	var cnt int64
+	if err := Conn.Table("permission p").
+		Joins("JOIN role_perm rp ON p.id = rp.perm_id").
+		Where("rp.role_id IN (?) AND p.perm_code = ?", roleIds, requiredPerm).
+		Count(&cnt).Error; err != nil {
 		return false, err
 	}
 
-	for _, perm := range perms {
-		if perm.ApiPath == path && perm.Method == method {
-			return true, nil
-		}
-	}
-	return false, nil
+	return cnt > 0, nil
 }

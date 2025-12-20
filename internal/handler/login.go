@@ -9,8 +9,8 @@ import (
 )
 
 type LoginRequest struct {
-	Account  string `json:"account", binding:"required", form:"account"`
-	Password string `json:"password", binding:"required", form:"password"`
+	Account  string `json:"account" binding:"required" form:"account"`
+	Password string `json:"password" binding:"required" form:"password"`
 }
 
 func DoLogin(ctx *gin.Context) {

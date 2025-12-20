@@ -4,7 +4,7 @@ package model
 type User struct {
 	Id       int64  `gorm:"column:id;primary_key;AUTO_INCREMENT;NOT NULL"`
 	Name     string `gorm:"column:name;default:NULL"`
-	Accout   string `gorm:"column:accout;default:NULL"`
+	Account  string `gorm:"column:account;default:NULL"`
 	Password string `gorm:"column:password;default:NULL"`
 }
 
