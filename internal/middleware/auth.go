@@ -8,13 +8,34 @@ import (
 
 	"github.com/RBAC/internal/repository"
 	tools "github.com/RBAC/pkg/ecode"
+	"github.com/RBAC/pkg/log"
 	"github.com/RBAC/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
+
+var checkUserPerm = repository.CheckUserPerm
 
 func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+
+		start := time.Now()
+		var allowed bool
+
+		defer func() {
+			// 所有退出路径都会记录日志（包括 Abort）
+			userId, _ := ctx.Get("userId") // 可能为空（未认证）
+			log.Logger.Info("rbac_auth_check",
+				zap.String("path", ctx.Request.URL.Path),
+				zap.String("perm", requiredPerm),
+				zap.Any("user_id", userId),
+				zap.Bool("allowed", allowed),
+				zap.Duration("took", time.Since(start)),
+				zap.String("client_ip", ctx.ClientIP()),
+			)
+		}()
+
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {
 			ctx.JSON(http.StatusUnauthorized, tools.NotLogin)
@@ -49,7 +70,6 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 		redisKey := fmt.Sprintf("user_perms_%d", userId)
 		cachekey := requiredPerm
 		// 检查用户权限
-		var allowed bool
 		val, err := repository.Rdb.HGet(ctx, redisKey, cachekey).Result()
 		if err == nil {
 			allowed = (val == "1")
@@ -58,9 +78,11 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 		} else if err == redis.Nil {
 			// redis中没有命中，从数据库中查询用户权限
 
-			hasPerm, err := repository.CheckUserPerm(userId, requiredPerm)
-			if err != nil || !hasPerm {
-				ctx.JSON(http.StatusInternalServerError, tools.NoPermission)
+			hasPerm, err := checkUserPerm(userId, requiredPerm)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, tools.ECode{
+					Message: "internak error",
+				})
 				ctx.Abort()
 				return
 			}
@@ -68,10 +90,16 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 			// 将权限写入redis
 			_, err = repository.Rdb.HSet(ctx, redisKey, cachekey, booltoString(allowed)).Result()
 			if err == nil {
-				_, _ = repository.Rdb.Expire(ctx, redisKey, remaining).Result()
+				// 无权限缓存时间要短（比如 30s），避免权限变更后用户长时间无法访问
+				if !allowed {
+					repository.Rdb.Expire(ctx, redisKey, 30*time.Second)
+				} else {
+					repository.Rdb.Expire(ctx, redisKey, remaining)
+				}
+				//“对正向权限和负向权限采用不同 TTL：正向用 Token 剩余时间（长），负向用 30s（短），平衡性能与一致性。”
 			}
 		} else {
-			hasPerm, _ := repository.CheckUserPerm(userId, requiredPerm)
+			hasPerm, _ := checkUserPerm(userId, requiredPerm)
 			allowed = hasPerm
 		}
 		if !allowed {
