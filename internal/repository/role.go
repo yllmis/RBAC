@@ -13,6 +13,22 @@ func GetRoleByUserId(userId int64) ([]int64, error) {
 	return roleIds, nil
 }
 
+func UserExistsByID(userId int64) (bool, error) {
+	var cnt int64
+	if err := Conn.Table("user").Where("id = ?", userId).Count(&cnt).Error; err != nil {
+		return false, err
+	}
+	return cnt > 0, nil
+}
+
+func RoleExistsByID(roleId int64) (bool, error) {
+	var cnt int64
+	if err := Conn.Table("role").Where("id = ?", roleId).Count(&cnt).Error; err != nil {
+		return false, err
+	}
+	return cnt > 0, nil
+}
+
 func SetUserRole(userId int64, roleId int64) error {
 	tx := Conn.Begin()
 	if tx.Error != nil {

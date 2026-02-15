@@ -6,3 +6,7 @@
 {"level":"info","ts":1766392214.9867802,"caller":"middleware/auth.go:29","msg":"rbac_auth_check","path":"/ping","perm":"user:list","user_id":2,"allowed":true,"took":0.003654269,"client_ip":"192.0.2.1"}
 {"level":"info","ts":1766392214.9919043,"caller":"middleware/auth.go:29","msg":"rbac_auth_check","path":"/ping","perm":"user:list","user_id":null,"allowed":false,"took":0.00337382,"client_ip":"192.0.2.1"}
 {"level":"info","ts":1766392214.993938,"caller":"middleware/auth.go:29","msg":"rbac_auth_check","path":"/ping","perm":"user:list","user_id":null,"allowed":false,"took":0.000070263,"client_ip":"192.0.2.1"}
+{"level":"info","ts":1771129549.39613,"caller":"middleware/auth.go:27","msg":"rbac_auth_check","path":"/ping","perm":"user:list","user_id":1,"allowed":true,"took":0.005378682,"client_ip":"192.0.2.1"}
+{"level":"info","ts":1771129549.4035258,"caller":"middleware/auth.go:27","msg":"rbac_auth_check","path":"/ping","perm":"user:list","user_id":2,"allowed":true,"took":0.004188407,"client_ip":"192.0.2.1"}
+{"level":"info","ts":1771129549.409351,"caller":"middleware/auth.go:27","msg":"rbac_auth_check","path":"/ping","perm":"user:list","user_id":null,"allowed":false,"took":0.003918975,"client_ip":"192.0.2.1"}
+{"level":"info","ts":1771129549.410762,"caller":"middleware/auth.go:27","msg":"rbac_auth_check","path":"/ping","perm":"user:list","user_id":null,"allowed":false,"took":0.000076727,"client_ip":"192.0.2.1"}

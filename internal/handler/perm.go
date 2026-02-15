@@ -3,21 +3,24 @@ package handler
 import (
 	"net/http"
 
-	"github.com/RBAC/internal/model"
 	"github.com/RBAC/internal/service"
 	tools "github.com/RBAC/pkg/ecode"
 	"github.com/gin-gonic/gin"
 )
 
-func SetRole(ctx *gin.Context) {
+type SetRoleRequest struct {
+	UserID int64 `json:"user_id" form:"user_id" binding:"required,gt=0"`
+	RoleID int64 `json:"role_id" form:"role_id" binding:"required,gt=0"`
+}
 
-	var userRole model.UserRole
-	if err := ctx.ShouldBind(&userRole); err != nil {
+func SetRole(ctx *gin.Context) {
+	var req SetRoleRequest
+	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, tools.ParamErr)
 		return
 	}
 
-	err := service.SetUserRole(userRole.UserId, userRole.RoleId)
+	err := service.SetUserRole(req.UserID, req.RoleID)
 	if err != nil {
 		ctx.JSON(http.StatusOK, tools.ECode{
 			Code:    10001,
@@ -50,5 +53,4 @@ func GetUserList(ctx *gin.Context) {
 		Message: "获取所有用户列表成功",
 		Data:    users,
 	})
-
 }
