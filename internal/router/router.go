@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/RBAC/internal/handler"
+	"github.com/RBAC/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,7 +21,8 @@ func Start() {
 	// 前端 axios.post('/login') 会请求到这里
 	g.POST("/login", handler.DoLogin)
 
-	g.GET("/api/users", handler.GetUserList)
+	g.GET("/api/users", middleware.AuthMiddleware("user:list"), handler.GetUserList)
+	g.POST("/api/user/role", middleware.AuthMiddleware("user:role:set"), handler.SetRole)
 
 	// 启动服务 (端口改为 8080 以匹配前端代码)
 	g.Run(":8080")

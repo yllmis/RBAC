@@ -15,17 +15,15 @@ import (
 	"go.uber.org/zap"
 )
 
-var checkUserPerm = repository.CheckUserPerm
+var checkUserPerm = repository.CheckUserPermWithRoute
 
 func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-
 		start := time.Now()
 		var allowed bool
 
 		defer func() {
-			// 所有退出路径都会记录日志（包括 Abort）
-			userId, _ := ctx.Get("userId") // 可能为空（未认证）
+			userId, _ := ctx.Get("userId")
 			log.Logger.Info("rbac_auth_check",
 				zap.String("path", ctx.Request.URL.Path),
 				zap.String("perm", requiredPerm),
@@ -43,7 +41,6 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 			return
 		}
 
-		// 兼容 Bearer token
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			ctx.JSON(http.StatusUnauthorized, tools.NotLogin)
@@ -52,7 +49,6 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
-		// 解析 token，获取userId
 		userId, expireAt, err := utils.ParseToken(tokenString)
 		if err != nil {
 			ctx.JSON(http.StatusUnauthorized, tools.NotLogin)
@@ -67,39 +63,56 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 			return
 		}
 
-		redisKey := fmt.Sprintf("user_perms_%d", userId)
-		cachekey := requiredPerm
-		// 检查用户权限
-		val, err := repository.Rdb.HGet(ctx, redisKey, cachekey).Result()
-		if err == nil {
-			allowed = (val == "1")
-			// 同步缓存过期时间为 token 剩余时间
-			_ = repository.Rdb.Expire(ctx, redisKey, remaining).Err()
-		} else if err == redis.Nil {
-			// redis中没有命中，从数据库中查询用户权限
+		reqMethod := ctx.Request.Method
+		reqPath := ctx.Request.URL.Path
 
-			hasPerm, err := checkUserPerm(userId, requiredPerm)
+		if repository.Rdb == nil {
+			hasPerm, err := checkUserPerm(userId, requiredPerm, reqMethod, reqPath)
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, tools.ECode{
-					Message: "internak error",
-				})
+				ctx.JSON(http.StatusInternalServerError, tools.ECode{Code: 10001, Message: "internal error"})
 				ctx.Abort()
 				return
 			}
 			allowed = hasPerm
-			// 将权限写入redis
+			if !allowed {
+				ctx.JSON(http.StatusForbidden, tools.NoPermission)
+				ctx.Abort()
+				return
+			}
+			ctx.Set("userId", userId)
+			ctx.Next()
+			return
+		}
+
+		redisKey := fmt.Sprintf("user_perms_%d", userId)
+		cachekey := requiredPerm
+		val, err := repository.Rdb.HGet(ctx, redisKey, cachekey).Result()
+		if err == nil {
+			allowed = (val == "1")
+			_ = repository.Rdb.Expire(ctx, redisKey, remaining).Err()
+		} else if err == redis.Nil {
+			hasPerm, err := checkUserPerm(userId, requiredPerm, reqMethod, reqPath)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, tools.ECode{Code: 10001, Message: "internal error"})
+				ctx.Abort()
+				return
+			}
+			allowed = hasPerm
 			_, err = repository.Rdb.HSet(ctx, redisKey, cachekey, booltoString(allowed)).Result()
 			if err == nil {
-				// 无权限缓存时间要短（比如 30s），避免权限变更后用户长时间无法访问
 				if !allowed {
 					repository.Rdb.Expire(ctx, redisKey, 30*time.Second)
 				} else {
 					repository.Rdb.Expire(ctx, redisKey, remaining)
 				}
-				//“对正向权限和负向权限采用不同 TTL：正向用 Token 剩余时间（长），负向用 30s（短），平衡性能与一致性。”
 			}
 		} else {
-			hasPerm, _ := checkUserPerm(userId, requiredPerm)
+			hasPerm, permErr := checkUserPerm(userId, requiredPerm, reqMethod, reqPath)
+			if permErr != nil {
+				ctx.JSON(http.StatusInternalServerError, tools.ECode{Code: 10001, Message: "internal error"})
+				ctx.Abort()
+				return
+			}
 			allowed = hasPerm
 		}
 		if !allowed {
@@ -108,10 +121,8 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 			return
 		}
 
-		// 将 userId 存入上下文，供后续处理使用
 		ctx.Set("userId", userId)
 		ctx.Next()
-
 	}
 }
 

@@ -6,12 +6,14 @@ import (
 	"github.com/RBAC/internal/repository"
 )
 
+var getRoleByUserId = repository.GetRoleByUserId
+var setUserRole = repository.SetUserRole
+
 func SetUserRole(userId, roleId int64) error {
-	// Implementation for setting a user's role
 	if roleId == 0 {
 		return errors.New("选择一个角色")
 	}
-	roleIds, err := repository.GetRoleByUserId(userId)
+	roleIds, err := getRoleByUserId(userId)
 	if err != nil {
 		return err
 	}
@@ -19,7 +21,9 @@ func SetUserRole(userId, roleId int64) error {
 		return errors.New("用户已分配角色，不能重复分配")
 	}
 
-	repository.SetUserRole(userId, roleId)
+	if err := setUserRole(userId, roleId); err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -9,11 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetRole(ctx *gin.Context) bool {
+func SetRole(ctx *gin.Context) {
 
 	var userRole model.UserRole
 	if err := ctx.ShouldBind(&userRole); err != nil {
 		ctx.JSON(http.StatusBadRequest, tools.ParamErr)
+		return
 	}
 
 	err := service.SetUserRole(userRole.UserId, userRole.RoleId)
@@ -23,9 +24,14 @@ func SetRole(ctx *gin.Context) bool {
 			Message: err.Error(),
 			Data:    nil,
 		})
-		return false
+		return
 	}
-	return true
+
+	ctx.JSON(http.StatusOK, tools.ECode{
+		Code:    0,
+		Message: "角色分配成功",
+		Data:    nil,
+	})
 }
 
 func GetUserList(ctx *gin.Context) {

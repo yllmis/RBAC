@@ -71,7 +71,7 @@ func TestAuth_CacheMiss_DBAllow(t *testing.T) {
 	defer mr.Close()
 
 	original := checkUserPerm
-	checkUserPerm = func(int64, string) (bool, error) { return true, nil }
+	checkUserPerm = func(int64, string, string, string) (bool, error) { return true, nil }
 	t.Cleanup(func() { checkUserPerm = original })
 
 	userID := int64(2)
@@ -103,7 +103,7 @@ func TestAuth_PermissionDenied(t *testing.T) {
 	defer mr.Close()
 
 	original := checkUserPerm
-	checkUserPerm = func(int64, string) (bool, error) { return false, nil }
+	checkUserPerm = func(int64, string, string, string) (bool, error) { return false, nil }
 	t.Cleanup(func() { checkUserPerm = original })
 
 	token, err := utils.GenerateToken(3)
