@@ -4,155 +4,586 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RBAC 登录</title>
+    <title>RBAC 管理台</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f2f5;
             margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f3f4f6;
+            color: #111827;
         }
 
-        .login-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        .login-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .login-card {
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            padding: 24px;
         }
 
-        .form-group {
-            margin-bottom: 1rem;
+        .login-title {
+            margin: 0 0 18px;
+            text-align: center;
+            font-size: 22px;
         }
 
-        label {
+        .mode-switch {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .mode-switch button {
+            flex: 1;
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .mode-switch .active {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        .field {
+            margin-bottom: 12px;
+        }
+
+        .field label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
+            margin-bottom: 6px;
+            color: #4b5563;
+            font-size: 14px;
         }
 
         input {
             width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #2563eb;
         }
 
         button {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: #1890ff;
-            color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 14px;
+            color: #fff;
+            background: #2563eb;
             cursor: pointer;
-            font-size: 1rem;
-        }
-
-        button:hover {
-            background-color: #40a9ff;
         }
 
         button:disabled {
-            background-color: #ccc;
+            background: #9ca3af;
+            cursor: not-allowed;
         }
 
-        .error-msg {
-            color: #ff4d4f;
-            margin-bottom: 1rem;
-            text-align: center;
+        .full-btn {
+            width: 100%;
+            margin-top: 4px;
         }
 
-        .success-msg {
-            color: #52c41a;
-            margin-bottom: 1rem;
-            text-align: center;
+        .msg {
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .msg-error {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
+        .msg-success {
+            background: #ecfdf5;
+            color: #047857;
+        }
+
+        .layout {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-nav {
+            height: 56px;
+            background: #111827;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            border-bottom: 1px solid #1f2937;
+        }
+
+        .brand {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtle {
+            color: #d1d5db;
+            font-size: 13px;
+        }
+
+        .btn-logout {
+            background: #dc2626;
+            padding: 8px 12px;
+        }
+
+        .body-wrap {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+        }
+
+        .side-bar {
+            width: 220px;
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 14px 10px;
+        }
+
+        .menu-title {
+            font-size: 12px;
+            color: #9ca3af;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+        }
+
+        .menu-item {
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            color: #e5e7eb;
+            padding: 10px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+        }
+
+        .menu-item:hover {
+            background: #374151;
+        }
+
+        .menu-item.active {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        .main {
+            flex: 1;
+            overflow: auto;
+            padding: 16px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+
+        .card h3 {
+            margin: 0 0 14px;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .row .field {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .table-wrap {
+            overflow: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        th {
+            background: #f9fafb;
+            color: #374151;
+        }
+
+        .empty {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 900px) {
+            .side-bar {
+                width: 170px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .body-wrap {
+                flex-direction: column;
+            }
+
+            .side-bar {
+                width: 100%;
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                overflow-x: auto;
+            }
+
+            .menu-title {
+                display: none;
+            }
+
+            .menu-item {
+                min-width: 130px;
+                margin: 0;
+            }
         }
     </style>
 </head>
 
 <body>
     <div id="app">
-        <div class="login-container">
-            <h2 style="text-align: center; margin-bottom: 2rem;">系统登录</h2>
-
-            <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
-            <div v-if="successMsg" class="success-msg">{{ successMsg }}</div>
-
-            <form @submit.prevent="handleLogin">
-                <div class="form-group">
-                    <label>账号</label>
-                    <input type="text" v-model="form.account" placeholder="请输入账号" required>
+        <div v-if="!token" class="login-wrap">
+            <div class="login-card">
+                <h2 class="login-title">RBAC 系统{{ authMode === 'login' ? '登录' : '注册' }}</h2>
+                <div class="mode-switch">
+                    <button type="button" :class="{ active: authMode === 'login' }" @click="switchMode('login')">登录</button>
+                    <button type="button" :class="{ active: authMode === 'register' }" @click="switchMode('register')">注册</button>
                 </div>
-                <div class="form-group">
-                    <label>密码</label>
-                    <input type="password" v-model="form.password" placeholder="请输入密码" required>
+                <div v-if="errorMsg" class="msg msg-error">{{ errorMsg }}</div>
+                <div v-if="successMsg" class="msg msg-success">{{ successMsg }}</div>
+
+                <form @submit.prevent="handleAuth">
+                    <div class="field" v-if="authMode === 'register'">
+                        <label>姓名</label>
+                        <input v-model.trim="registerForm.name" type="text" placeholder="请输入姓名(可选)">
+                    </div>
+                    <div class="field" v-if="authMode === 'login'">
+                        <label>账号</label>
+                        <input v-model.trim="loginForm.account" type="text" placeholder="请输入账号" required>
+                    </div>
+                    <div class="field" v-else>
+                        <label>账号</label>
+                        <input v-model.trim="registerForm.account" type="text" placeholder="请输入账号" required>
+                    </div>
+                    <div class="field" v-if="authMode === 'login'">
+                        <label>密码</label>
+                        <input v-model.trim="loginForm.password" type="password" placeholder="请输入密码" required>
+                    </div>
+                    <div class="field" v-else>
+                        <label>密码</label>
+                        <input v-model.trim="registerForm.password" type="password" placeholder="请输入密码" required>
+                    </div>
+                    <button type="submit" class="full-btn" :disabled="loading">{{ loading ? '提交中...' : (authMode === 'login' ? '登录' : '注册') }}</button>
+                </form>
+            </div>
+        </div>
+
+        <div v-else class="layout">
+            <header class="top-nav">
+                <div class="brand">RBAC 管理台</div>
+                <div class="top-actions">
+                    <span class="subtle">当前用户已登录</span>
+                    <button class="btn-logout" @click="logout">退出登录</button>
                 </div>
-                <button type="submit" :disabled="loading">
-                    {{ loading ? '登录中...' : '登录' }}
-                </button>
-            </form>
+            </header>
+
+            <div class="body-wrap">
+                <aside class="side-bar">
+                    <div class="menu-title">导航菜单</div>
+                    <button class="menu-item" :class="{ active: activeMenu === 'users' }" @click="activeMenu = 'users'">用户列表</button>
+                    <button class="menu-item" :class="{ active: activeMenu === 'assign' }" @click="activeMenu = 'assign'">分配角色</button>
+                </aside>
+
+                <main class="main">
+                    <div v-if="errorMsg" class="msg msg-error">{{ errorMsg }}</div>
+                    <div v-if="successMsg" class="msg msg-success">{{ successMsg }}</div>
+
+                    <section v-if="activeMenu === 'users'" class="card">
+                        <h3>用户列表</h3>
+                        <div class="toolbar">
+                            <button @click="fetchUsers" :disabled="loadingUsers">{{ loadingUsers ? '刷新中...' : '刷新用户列表' }}</button>
+                        </div>
+                        <div v-if="users.length === 0" class="empty">暂无数据，请点击刷新按钮。</div>
+                        <div v-else class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>姓名</th>
+                                        <th>账号</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="u in users" :key="u.Id || u.id">
+                                        <td>{{ u.Id || u.id }}</td>
+                                        <td>{{ u.Name || u.name || '-' }}</td>
+                                        <td>{{ u.Account || u.account || '-' }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section v-if="activeMenu === 'assign'" class="card">
+                        <h3>分配角色</h3>
+                        <form @submit.prevent="assignRole">
+                            <div class="row">
+                                <div class="field">
+                                    <label>用户 ID</label>
+                                    <input v-model.number="assignForm.user_id" type="number" min="1" placeholder="例如 1" required>
+                                </div>
+                                <div class="field">
+                                    <label>角色 ID</label>
+                                    <input v-model.number="assignForm.role_id" type="number" min="1" placeholder="例如 2" required>
+                                </div>
+                            </div>
+                            <button type="submit" :disabled="assigning">{{ assigning ? '提交中...' : '提交分配' }}</button>
+                        </form>
+                    </section>
+                </main>
+            </div>
         </div>
     </div>
 
     <script>
-        const { createApp, reactive, ref } = Vue;
+        const { createApp, reactive, ref, onMounted } = Vue;
+        const BASE_URL = 'http://localhost:8080';
 
         createApp({
             setup() {
-                const form = reactive({
+                const token = ref(localStorage.getItem('token') || '');
+                const loading = ref(false);
+                const loadingUsers = ref(false);
+                const assigning = ref(false);
+                const users = ref([]);
+                const errorMsg = ref('');
+                const successMsg = ref('');
+                const activeMenu = ref('users');
+                const authMode = ref('login');
+
+                const loginForm = reactive({
                     account: '',
                     password: ''
                 });
-                const loading = ref(false);
-                const errorMsg = ref('');
-                const successMsg = ref('');
 
-                const handleLogin = async () => {
-                    loading.value = true;
+                const registerForm = reactive({
+                    name: '',
+                    account: '',
+                    password: ''
+                });
+
+                const assignForm = reactive({
+                    user_id: null,
+                    role_id: null
+                });
+
+                const clearMsg = () => {
                     errorMsg.value = '';
                     successMsg.value = '';
+                };
 
+                const switchMode = (mode) => {
+                    authMode.value = mode;
+                    clearMsg();
+                };
+
+                const authHeaders = () => ({
+                    Authorization: `Bearer ${token.value}`
+                });
+
+                const handleApiError = (err, fallback = '请求失败') => {
+                    if (err?.response?.status === 401) {
+                        token.value = '';
+                        localStorage.removeItem('token');
+                        errorMsg.value = '登录已过期，请重新登录';
+                        return;
+                    }
+                    errorMsg.value = err?.response?.data?.message || fallback;
+                };
+
+                const handleLogin = async () => {
+                    const { data } = await axios.post(`${BASE_URL}/login`, {
+                        account: loginForm.account,
+                        password: loginForm.password
+                    });
+
+                    if (data.code === 0 && data.data?.token) {
+                        token.value = data.data.token;
+                        localStorage.setItem('token', token.value);
+                        successMsg.value = '登录成功';
+                        activeMenu.value = 'users';
+                        await fetchUsers();
+                    } else {
+                        errorMsg.value = data.message || '登录失败';
+                    }
+                };
+
+                const handleRegister = async () => {
+                    const { data } = await axios.post(`${BASE_URL}/register`, {
+                        name: registerForm.name,
+                        account: registerForm.account,
+                        password: registerForm.password
+                    });
+
+                    if (data.code === 0) {
+                        successMsg.value = data.message || '注册成功，请登录';
+                        loginForm.account = registerForm.account;
+                        loginForm.password = registerForm.password;
+                        registerForm.name = '';
+                        registerForm.account = '';
+                        registerForm.password = '';
+                        authMode.value = 'login';
+                    } else {
+                        errorMsg.value = data.message || '注册失败';
+                    }
+                };
+
+                const handleAuth = async () => {
+                    clearMsg();
+                    loading.value = true;
                     try {
-                        // 假设后端接口地址为 /login，如果不同请修改此处
-                        // 注意：如果前后端端口不同，可能需要配置跨域或代理
-                        const res = await axios.post('http://localhost:8080/login', {
-                            account: form.account,
-                            password: form.password
-                        });
-
-                        const data = res.data;
-
-                        // 根据 ecode 包的定义，code 1000 为成功
-                        if (data.code === 1000) {
-                            successMsg.value = '登录成功！正在跳转...';
-                            // 保存 token
-                            localStorage.setItem('token', data.data.token);
-                            // 可以在这里进行跳转，例如 window.location.href = '/dashboard';
+                        if (authMode.value === 'login') {
+                            await handleLogin();
                         } else {
-                            errorMsg.value = data.msg || '登录失败';
+                            await handleRegister();
                         }
                     } catch (err) {
-                        console.error(err);
-                        errorMsg.value = '网络错误或服务器异常';
+                        handleApiError(err, '网络错误或服务器异常');
                     } finally {
                         loading.value = false;
                     }
                 };
 
+                const fetchUsers = async () => {
+                    clearMsg();
+                    loadingUsers.value = true;
+                    try {
+                        const { data } = await axios.get(`${BASE_URL}/api/users`, {
+                            headers: authHeaders()
+                        });
+                        if (data.code === 0) {
+                            users.value = Array.isArray(data.data) ? data.data : [];
+                        } else {
+                            errorMsg.value = data.message || '获取用户失败';
+                        }
+                    } catch (err) {
+                        handleApiError(err, '获取用户失败');
+                    } finally {
+                        loadingUsers.value = false;
+                    }
+                };
+
+                const assignRole = async () => {
+                    clearMsg();
+                    if (!assignForm.user_id || !assignForm.role_id) {
+                        errorMsg.value = '请填写用户 ID 与角色 ID';
+                        return;
+                    }
+                    assigning.value = true;
+                    try {
+                        const { data } = await axios.post(`${BASE_URL}/api/user/role`, {
+                            user_id: assignForm.user_id,
+                            role_id: assignForm.role_id
+                        }, {
+                            headers: authHeaders()
+                        });
+
+                        if (data.code === 0) {
+                            successMsg.value = data.message || '角色分配成功';
+                        } else {
+                            errorMsg.value = data.message || '角色分配失败';
+                        }
+                    } catch (err) {
+                        handleApiError(err, '角色分配失败');
+                    } finally {
+                        assigning.value = false;
+                    }
+                };
+
+                const logout = () => {
+                    token.value = '';
+                    users.value = [];
+                    localStorage.removeItem('token');
+                    clearMsg();
+                    successMsg.value = '已退出登录';
+                    authMode.value = 'login';
+                };
+
+                onMounted(() => {
+                    if (token.value) {
+                        fetchUsers();
+                    }
+                });
+
                 return {
-                    form,
+                    token,
                     loading,
+                    loadingUsers,
+                    assigning,
+                    users,
                     errorMsg,
                     successMsg,
-                    handleLogin
+                    loginForm,
+                    registerForm,
+                    assignForm,
+                    activeMenu,
+                    authMode,
+                    switchMode,
+                    handleAuth,
+                    fetchUsers,
+                    assignRole,
+                    logout
                 };
             }
         }).mount('#app');

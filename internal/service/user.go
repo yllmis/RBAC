@@ -4,11 +4,34 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/RBAC/internal/model"
 	"github.com/RBAC/internal/repository"
 	"github.com/RBAC/pkg/utils"
+	"github.com/redis/go-redis/v9"
 )
+
+func Register(ctx context.Context, name, account, password string) error {
+	_ = ctx
+	name = strings.TrimSpace(name)
+	account = strings.TrimSpace(account)
+	password = strings.TrimSpace(password)
+
+	if account == "" || password == "" {
+		return errors.New("账号或密码不能为空")
+	}
+
+	exists, err := repository.AccountExists(account)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return errors.New("账号已存在")
+	}
+
+	return repository.CreateUser(name, account, password)
+}
 
 func Login(ctx context.Context, account, password string) (string, error) {
 
@@ -27,34 +50,37 @@ func Login(ctx context.Context, account, password string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	roleId, _ := repository.GetRoleByUserId(user.Id)
-	perms, err := repository.GetPermByRole(roleId)
+
+	roleID, err := repository.GetRoleByUserId(user.Id)
+	if err != nil {
+		return "", err
+	}
+	perms, err := repository.GetPermByRole(roleID)
 	if err != nil {
 		return "", err
 	}
 
-	rediskey := fmt.Sprintf("user_perms_%d", user.Id)
+	redisKey := fmt.Sprintf("user_perms_%d", user.Id)
 	permMap := make(map[string]interface{})
 
 	for _, p := range perms {
-		// 确保 PermCode 不为空
 		if p.PermCode != "" {
-			// Field: "user:list", Value: "1"
 			permMap[p.PermCode] = "1"
 		}
 	}
 
-	if len(permMap) > 0 {
-		err = repository.Rdb.HSet(ctx, rediskey, permMap).Err()
-		if err != nil {
-			fmt.Printf("Redis缓存失败,%s", err)
+	if repository.Rdb != nil && len(permMap) > 0 {
+		_, pipeErr := repository.Rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+			pipe.HSet(ctx, redisKey, permMap)
+			pipe.Expire(ctx, redisKey, utils.TokenTTL)
+			return nil
+		})
+		if pipeErr != nil {
+			fmt.Printf("Redis缓存失败,%s", pipeErr)
 		}
-
-		repository.Rdb.Expire(ctx, rediskey, utils.TokenTTL)
 	}
 
 	return token, err
-
 }
 
 func GetUserList(ctx context.Context) ([]model.User, error) {

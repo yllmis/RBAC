@@ -20,6 +20,7 @@ func Start() {
 	// 3. API 路由
 	// 前端 axios.post('/login') 会请求到这里
 	g.POST("/login", handler.DoLogin)
+	g.POST("/register", handler.DoRegister)
 
 	g.GET("/api/users", middleware.AuthMiddleware("user:list"), handler.GetUserList)
 	g.POST("/api/user/role", middleware.AuthMiddleware("user:role:set"), handler.SetRole)

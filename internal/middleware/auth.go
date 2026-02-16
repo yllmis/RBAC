@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -13,9 +14,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 )
 
 var checkUserPerm = repository.CheckUserPermWithRoute
+var permCheckGroup singleflight.Group
 
 func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -67,8 +70,8 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 		reqPath := ctx.Request.URL.Path
 
 		if repository.Rdb == nil {
-			hasPerm, err := checkUserPerm(userId, requiredPerm, reqMethod, reqPath)
-			if err != nil {
+			hasPerm, permErr := loadPermWithSingleflight(ctx, userId, requiredPerm, reqMethod, reqPath)
+			if permErr != nil {
 				ctx.JSON(http.StatusInternalServerError, tools.ECode{Code: 10001, Message: "internal error"})
 				ctx.Abort()
 				return
@@ -85,29 +88,38 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 		}
 
 		redisKey := fmt.Sprintf("user_perms_%d", userId)
-		cachekey := requiredPerm
-		val, err := repository.Rdb.HGet(ctx, redisKey, cachekey).Result()
+		cacheKey := requiredPerm
+		val, err := repository.Rdb.HGet(ctx, redisKey, cacheKey).Result()
 		if err == nil {
 			allowed = (val == "1")
 			_ = repository.Rdb.Expire(ctx, redisKey, remaining).Err()
 		} else if err == redis.Nil {
-			hasPerm, err := checkUserPerm(userId, requiredPerm, reqMethod, reqPath)
-			if err != nil {
+			hasPerm, permErr := loadPermWithSingleflight(ctx, userId, requiredPerm, reqMethod, reqPath)
+			if permErr != nil {
 				ctx.JSON(http.StatusInternalServerError, tools.ECode{Code: 10001, Message: "internal error"})
 				ctx.Abort()
 				return
 			}
 			allowed = hasPerm
-			_, err = repository.Rdb.HSet(ctx, redisKey, cachekey, booltoString(allowed)).Result()
-			if err == nil {
-				if !allowed {
-					repository.Rdb.Expire(ctx, redisKey, 30*time.Second)
-				} else {
-					repository.Rdb.Expire(ctx, redisKey, remaining)
-				}
+
+			ttl := remaining
+			if !allowed {
+				ttl = 30 * time.Second
+			}
+			if cacheErr := setPermCacheWithTTL(ctx, redisKey, cacheKey, boolToString(allowed), ttl); cacheErr != nil {
+				log.Logger.Warn("cache_permission_failed",
+					zap.Int64("user_id", userId),
+					zap.String("perm", cacheKey),
+					zap.Error(cacheErr),
+				)
 			}
 		} else {
-			hasPerm, permErr := checkUserPerm(userId, requiredPerm, reqMethod, reqPath)
+			log.Logger.Warn("read_permission_cache_failed",
+				zap.Int64("user_id", userId),
+				zap.String("perm", cacheKey),
+				zap.Error(err),
+			)
+			hasPerm, permErr := loadPermWithSingleflight(ctx, userId, requiredPerm, reqMethod, reqPath)
 			if permErr != nil {
 				ctx.JSON(http.StatusInternalServerError, tools.ECode{Code: 10001, Message: "internal error"})
 				ctx.Abort()
@@ -115,6 +127,7 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 			}
 			allowed = hasPerm
 		}
+
 		if !allowed {
 			ctx.JSON(http.StatusForbidden, tools.NoPermission)
 			ctx.Abort()
@@ -126,7 +139,32 @@ func AuthMiddleware(requiredPerm string) gin.HandlerFunc {
 	}
 }
 
-func booltoString(b bool) string {
+func loadPermWithSingleflight(ctx context.Context, userID int64, requiredPerm, method, apiPath string) (bool, error) {
+	key := fmt.Sprintf("%d|%s|%s|%s", userID, requiredPerm, method, apiPath)
+	result, err, _ := permCheckGroup.Do(key, func() (interface{}, error) {
+		return checkUserPerm(userID, requiredPerm, method, apiPath)
+	})
+	if err != nil {
+		return false, err
+	}
+
+	allowed, ok := result.(bool)
+	if !ok {
+		return false, fmt.Errorf("invalid permission check result type")
+	}
+	return allowed, nil
+}
+
+func setPermCacheWithTTL(ctx context.Context, redisKey, cacheKey, value string, ttl time.Duration) error {
+	_, err := repository.Rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.HSet(ctx, redisKey, cacheKey, value)
+		pipe.Expire(ctx, redisKey, ttl)
+		return nil
+	})
+	return err
+}
+
+func boolToString(b bool) string {
 	if b {
 		return "1"
 	}
